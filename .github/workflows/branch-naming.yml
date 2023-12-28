@@ -13,7 +13,6 @@ permissions:
 jobs:
     branch-naming-policy:
         runs-on: ubuntu-latest
-
         steps:
             - name: Checkout
               uses: actions/checkout@v3
@@ -35,7 +34,21 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: "Install Volta"
+              uses: volta-cli/action@v4
+
+            - name: "Restore node_modules cache"
+              id: cache-npm
+              uses: actions/cache@v3
+              with:
+                  path: node_modules
+                  key: npm-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      npm-${{ env.cache-name }}-
+                      npm-
+
             - name: "Install npm dependencies"
+              if: steps.cache-npm.outputs.cache-hit != 'true'
               run: HUSKY=0 npm ci
 
             - name: "Code formatting verification with Prettier"
