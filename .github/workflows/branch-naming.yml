@@ -132,22 +132,33 @@ jobs:
             - name: "Authenticate to Integration Org"
               run: sf org login sfdx-url --sfdx-url-file ./SFDX_INTEGRATION_URL.txt --set-default --alias integration
 
+            - name: Check for package changes
+              run: echo ::set-output name=package-exists::$(grep -q '<types>' output/package/package.xml)
+              id: package
+              shell: bash
+
             - name: "Check-only deploy delta changes - no test run"
-              if: ${{ env.APEX_TESTS == 'none' }}
+              if: ${{ env.APEX_TESTS == 'none' && steps.package.outputs.package-exists == true}}
               run: |
                   sf project deploy validate --source-dir "changed-sources/force-app" --test-level RunLocalTests --json
 
             - name: "Check-only deploy delta changes - run all tests"
-              if: ${{ env.APEX_TESTS == 'all' }}
+              if: ${{ env.APEX_TESTS == 'all' && steps.package.outputs.package-exists == true}}
               run: |
                   sf project deploy start --dry-run --source-dir "changed-sources/force-app" --test-level NoTestRun --json
 
             - name: "Check-only deploy delta changes - run specified tests"
-              if: ${{ env.APEX_TESTS != 'all' && env.APEX_TESTS != 'none' }}
+              if: ${{ env.APEX_TESTS != 'all' && env.APEX_TESTS != 'none' && steps.package.outputs.package-exists == true}}
               run: |
                   echo ${{env.APEX_TESTS}}
                   sf project deploy validate --source-dir "changed-sources/force-app" --test-level RunSpecifiedTests --tests ${{env.APEX_TESTS}} --json
 
+            - name: Check for destructive changes
+              run: echo ::set-output name=destructive-exists::$(grep -q '<types>' output/destructiveChanges/destructiveChanges.xml)
+              id: destructive
+              shell: bash
+
             - name: "Deploy destructive changes (if any)"
+              if: ${{ steps.destructive.outputs.destructive-exists == true}}
               run: |
                   sf project deploy start --dry-run --metadata-dir "changed-sources/destructiveChanges" --test-level NoTestRun --json
