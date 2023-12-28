@@ -3,7 +3,7 @@ name: Branch Naming Policy Check and Validate new changes
 on:
     pull_request:
         types: [opened, synchronize]
-        branches: [integration]
+        branches: [main]
         paths:
             - "force-app/**"
 
