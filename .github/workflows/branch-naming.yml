@@ -150,4 +150,4 @@ jobs:
 
             - name: "Deploy destructive changes (if any)"
               run: |
-                  sf project deploy validate --metadata-dir "changed-sources/destructiveChanges" --ignorewarnings
+                  sf project deploy validate --metadata-dir "changed-sources/destructiveChanges"
