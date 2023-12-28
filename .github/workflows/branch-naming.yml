@@ -92,12 +92,12 @@ jobs:
               run: |
                   echo y | sfdx plugins:install sfdx-git-delta
                   sfdx plugins
-            
+
             - name: "Installing java"
-                  run: |
-                      sudo apt-get update
-                      sudo apt install default-jdk
-    
+              run: |
+                  sudo apt-get update
+                  sudo apt install default-jdk
+
             - name: "Installing SFDX scanner"
               run: sfdx plugins:install @salesforce/sfdx-scanner
 
@@ -105,8 +105,8 @@ jobs:
               shell: bash
               run: |
                   echo ${{ secrets.SFDX_INTEGRATION_URL}} > ./SFDX_INTEGRATION_URL.txt
-            
-                  - name: "Create delta packages for new, modified or deleted metadata"
+
+            - name: "Create delta packages for new, modified or deleted metadata"
               run: |
                   mkdir changed-sources
                   sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --output changed-sources/ --generate-delta --source force-app/
