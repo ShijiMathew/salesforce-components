@@ -45,3 +45,39 @@ jobs:
 
             - name: "Lint Lightning Web Components / Aura Components"
               run: npm run lint
+
+    validate-on-sit-org:
+        runs-on: ubuntu-latest
+        needs: format-lint
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        steps:
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: "14"
+
+            - name: "Checkout source code"
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+
+            - name: "Read PR Body"
+              env:
+                  PR_BODY: ${{github.event.pull_request.body}}
+              run: |
+                  echo $PR_BODY > ./pr_body.txt
+                  node ./parsePR.js              
+                  TESTS=$(cat testsToRun.txt)       
+                  echo "APEX_TESTS=$TESTS" >> $GITHUB_ENV
+                  - name: Install NPM
+                  run: |
+                      npm install
+
+            - name: Install SFDX
+              run: |
+                  npm install --global sfdx-cli
+                  sfdx --version
+
+            - name: Install sfdx git delta
+              run: |
+                  echo y | sfdx plugins:install sfdx-git-delta
+                  sfdx plugins
