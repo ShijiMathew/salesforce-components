@@ -12,7 +12,7 @@
             <sorted>false</sorted>
             <value>
                 <fullName>Salesforce</fullName>
-                <default>false</default>
+                <default>true</default>
                 <label>Salesforce</label>
             </value>
             <value>
