@@ -86,10 +86,10 @@ jobs:
                   node ./parsePR.js              
                   TESTS=$(cat testsToRun.txt)       
                   echo "APEX_TESTS=$TESTS" >> $GITHUB_ENV
-            
+
             - name: Install NPM
-                  run: |
-                      npm install
+              run: |
+                  npm install
 
             - name: Install SFDX
               run: |
