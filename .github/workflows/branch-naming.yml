@@ -133,36 +133,34 @@ jobs:
               run: sf org login sfdx-url --sfdx-url-file ./SFDX_INTEGRATION_URL.txt --set-default --alias integration
 
             - name: Check for package changes
-              run: |
-                  echo "package-exists=$(grep '<types>' changed-sources/package/package.xml | wc -l)" >> $GITHUB_OUTPUT
-                  echo ${{steps.package.outputs.package-exists}}
               id: package
               shell: bash
+              run: |
+                  echo "CHANGE_EXISTS=$(grep -c '<types>' changed-sources/package/package.xml)" >> $GITHUB_ENV
 
             - name: "Check-only deploy delta changes - no test run"
-              if: ${{ env.APEX_TESTS == 'none' && steps.package.outputs.package-exists != '0'}}
+              if: ${{ env.APEX_TESTS == 'none' && env.CHANGE_EXISTS != '0'}}
               run: |
                   sf project deploy validate --source-dir "changed-sources/force-app" --test-level RunLocalTests --json
 
             - name: "Check-only deploy delta changes - run all tests"
-              if: ${{ env.APEX_TESTS == 'all' && steps.package.outputs.package-exists != '0'}}
+              if: ${{ env.APEX_TESTS == 'all' && env.CHANGE_EXISTS != '0'}}
               run: |
                   sf project deploy start --dry-run --source-dir "changed-sources/force-app" --test-level NoTestRun --json
 
             - name: "Check-only deploy delta changes - run specified tests"
-              if: ${{ env.APEX_TESTS != 'all' && env.APEX_TESTS != 'none' && steps.package.outputs.package-exists != '0'}}
+              if: ${{ env.APEX_TESTS != 'all' && env.APEX_TESTS != 'none' && env.CHANGE_EXISTS != '0'}}
               run: |
                   echo ${{env.APEX_TESTS}}
                   sf project deploy validate --source-dir "changed-sources/force-app" --test-level RunSpecifiedTests --tests ${{env.APEX_TESTS}} --json
 
             - name: Check for destructive changes
-              run: |
-                  echo "destructive-exists=$(grep '<types>' changed-sources/destructiveChanges/destructiveChanges.xml | wc -l)" >> $GITHUB_OUTPUT
-                  echo ${{steps.destructive.outputs.destructive-exists}}
               id: destructive
               shell: bash
+              run: |
+                  echo "CHANGE_EXISTS=$(grep -c '<types>' changed-sources/destructiveChanges/destructiveChanges.xml)" >> $GITHUB_ENV
 
             - name: "Deploy destructive changes (if any)"
-              if: ${{ steps.destructive.outputs.destructive-exists != '0'}}
+              if: ${{ env.CHANGE_EXISTS != '0'}}
               run: |
                   sf project deploy start --dry-run --metadata-dir "changed-sources/destructiveChanges" --test-level NoTestRun --json
