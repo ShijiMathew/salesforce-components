@@ -150,4 +150,4 @@ jobs:
 
             - name: "Deploy destructive changes (if any)"
               run: |
-                  sf project deploy validate --metadata-dir "changed-sources/destructiveChanges"
+                  sf project deploy start --dry-run --metadata-dir "changed-sources/destructiveChanges" --test-level NoTestRun --json
