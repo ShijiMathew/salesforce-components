@@ -17,6 +17,8 @@ async function extractTests() {
             let tests = line.substring(8, line.length - 7);
             await fs.promises.writeFile(testsFile, tests);
             await fs.promises.appendFile(testsFile, "\n");
+        } else {
+            let tests = "mone";
         }
     }
 }
