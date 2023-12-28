@@ -26,7 +26,6 @@ jobs:
 
     format-lint:
         runs-on: ubuntu-latest
-        needs: branch-naming-policy
         if: ${{ github.actor != 'dependabot[bot]' }}
         steps:
             - name: "Checkout source code"
@@ -51,20 +50,26 @@ jobs:
               if: steps.cache-npm.outputs.cache-hit != 'true'
               run: HUSKY=0 npm ci
 
-            #- name: "Code formatting verification with Prettier"
-            #  run: npm run prettier:verify
+            - name: "Code formatting verification with Prettier"
+              run: npm run prettier:verify
+
+            - name: "Check file existence"
+              id: check_files
+              uses: andstor/file-existence-action@v2
+              with:
+                  files: "**/{lwc,aura}/**/*.js"
 
             - name: "Lint Lightning Web Components / Aura Components"
+              if: steps.check_files.outputs.files_exists == 'true'
               run: npm run lint
 
     validate-on-sit-org:
         runs-on: ubuntu-latest
-        needs: format-lint
         if: ${{ github.actor != 'dependabot[bot]' }}
         steps:
             - uses: actions/setup-node@v3
               with:
-                  node-version: "14"
+                  node-version: "20"
 
             - name: "Checkout source code"
               uses: actions/checkout@v3
@@ -79,16 +84,66 @@ jobs:
                   node ./parsePR.js              
                   TESTS=$(cat testsToRun.txt)       
                   echo "APEX_TESTS=$TESTS" >> $GITHUB_ENV
-                  - name: Install NPM
-                  run: |
-                      npm install
+
+            - name: "Installing java"
+              run: |
+                  sudo apt-get update
+                  sudo apt install default-jdk
+
+            - name: Install NPM
+              run: |
+                  npm install
 
             - name: Install SFDX
               run: |
-                  npm install --global sfdx-cli
-                  sfdx --version
+                  npm install @salesforce/cli --global
+                  sf version
 
-            - name: Install sfdx git delta
+            - name: Install SFDX git delta
               run: |
                   echo y | sfdx plugins:install sfdx-git-delta
                   sfdx plugins
+
+            - name: Install SFDX scanner
+              run: sfdx plugins:install @salesforce/sfdx-scanner
+
+            - name: "Populate auth file with SFDX_URL secret of sit org"
+              shell: bash
+              run: |
+                  echo ${{ secrets.SFDX_INTEGRATION_URL}} > ./SFDX_INTEGRATION_URL.txt
+
+            - name: "Create delta packages for new, modified or deleted metadata"
+              run: |
+                  mkdir changed-sources
+                  sfdx sgd:source:delta --to "HEAD" --from "HEAD^" --output changed-sources/ --generate-delta --source force-app/
+
+            - name: "Scan code"
+              run: |
+                  cd changed-sources
+                  sfdx scanner:run --format sarif --target './**/*.cls' --category "Design,Best Practices,Performance" --outfile 'apexScanResults.sarif'  
+                  cd ..
+
+            - name: Upload SARIF file
+              uses: github/codeql-action/upload-sarif@v1
+              with:
+                  sarif_file: changed-sources/apexScanResults.sarif
+
+            # Authenticate to org
+            - name: "Authenticate to Integration Org"
+              run: sf org login sfdx-url --sfdx-url-file ./SFDX_INTEGRATION_URL.txt --set-default --alias integration
+
+            - name: "Check-only deploy delta changes - run specified tests"
+              if: ${{ env.APEX_TESTS != 'all' }}
+              run: |
+                  echo ${{env.APEX_TESTS}}
+                  sf project deploy start --source "changed-sources/force-app" --checkonly  --test-level RunSpecifiedTests --runtests ${{env.APEX_TESTS}} --json
+                  sfdx force:source:deploy -p "changed-sources/force-app" --checkonly --testlevel RunSpecifiedTests --runtests ${{env.APEX_TESTS}} --json
+
+            - name: "Check-only deploy delta changes - run all tests"
+              if: ${{ env.APEX_TESTS == 'all' }}
+              run: |
+                  sf project deploy start --source "changed-sources/force-app" --checkonly --testlevel RunLocalTests  --json
+
+            - name: "Deploy destructive changes (if any)"
+              run: |
+                  sf project deploy validate --metadata-dir "changed-sources/destructiveChanges" --ignorewarnings
