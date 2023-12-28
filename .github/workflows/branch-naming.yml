@@ -1,8 +1,16 @@
-name: Branch Naming Policy Action
+name: Branch Naming Policy Check and Validate new changes
 
 on:
-    create:
-    delete:
+    pull_request:
+        types: [opened, synchronize]
+        branches: [integration]
+        paths:
+            - "force-app/**"
+
+permissions:
+    id-token: write
+    contents: write
+    packages: write
 
 jobs:
     branch-naming-policy:
@@ -18,3 +26,22 @@ jobs:
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   regex: "^(CRM)-([0-9]+)-([a-zA-Z]+)"
+
+    format-lint:
+        runs-on: ubuntu-latest
+        needs: branch-naming-policy
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        steps:
+            - name: "Checkout source code"
+              uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
+
+            - name: "Install npm dependencies"
+              run: HUSKY=0 npm ci
+
+            - name: "Code formatting verification with Prettier"
+              run: npm run prettier:verify
+
+            - name: "Lint Lightning Web Components / Aura Components"
+              run: npm run lint
