@@ -133,7 +133,9 @@ jobs:
               run: sf org login sfdx-url --sfdx-url-file ./SFDX_INTEGRATION_URL.txt --set-default --alias integration
 
             - name: Check for package changes
-              run: echo "package-exists=$(grep -q '<types>' changed-sources/package/package.xml)" >> $GITHUB_OUTPUT
+              run: |
+                  echo "package-exists=$(grep -q '<types>' changed-sources/package/package.xml)" >> $GITHUB_OUTPUT
+                  echo ${{steps.package.outputs.package-exists}}
               id: package
               shell: bash
 
@@ -154,7 +156,9 @@ jobs:
                   sf project deploy validate --source-dir "changed-sources/force-app" --test-level RunSpecifiedTests --tests ${{env.APEX_TESTS}} --json
 
             - name: Check for destructive changes
-              run: echo "destructive-exists=$(grep -q '<types>' changed-sources/destructiveChanges/destructiveChanges.xml)" >> $GITHUB_OUTPUT
+              run: |
+                  echo "destructive-exists=$(grep -q '<types>' changed-sources/destructiveChanges/destructiveChanges.xml)" >> $GITHUB_OUTPUT
+                  echo ${{steps.destructive.outputs.destructive-exists}}
               id: destructive
               shell: bash
 
