@@ -26,7 +26,6 @@ jobs:
 
     format-lint:
         runs-on: ubuntu-latest
-        needs: branch-naming-policy
         if: ${{ github.actor != 'dependabot[bot]' }}
         steps:
             - name: "Checkout source code"
@@ -66,12 +65,11 @@ jobs:
 
     validate-on-sit-org:
         runs-on: ubuntu-latest
-        needs: format-lint
         if: ${{ github.actor != 'dependabot[bot]' }}
         steps:
             - uses: actions/setup-node@v3
               with:
-                  node-version: "16"
+                  node-version: "20"
 
             - name: "Checkout source code"
               uses: actions/checkout@v3
@@ -87,6 +85,11 @@ jobs:
                   TESTS=$(cat testsToRun.txt)       
                   echo "APEX_TESTS=$TESTS" >> $GITHUB_ENV
 
+            - name: "Installing java"
+              run: |
+                  sudo apt-get update
+                  sudo apt install default-jdk
+
             - name: Install NPM
               run: |
                   npm install
@@ -96,17 +99,12 @@ jobs:
                   npm install @salesforce/cli --global
                   sf version
 
-            - name: Install sfdx git delta
+            - name: Install SFDX git delta
               run: |
                   echo y | sfdx plugins:install sfdx-git-delta
                   sfdx plugins
 
-            - name: "Installing java"
-              run: |
-                  sudo apt-get update
-                  sudo apt install default-jdk
-
-            - name: "Installing SFDX scanner"
+            - name: Install SFDX scanner
               run: sfdx plugins:install @salesforce/sfdx-scanner
 
             - name: "Populate auth file with SFDX_URL secret of sit org"
