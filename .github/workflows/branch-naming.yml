@@ -158,6 +158,7 @@ jobs:
               id: destructive
               shell: bash
               run: |
+                  echo ls changed-sources/destructiveChanges
                   echo "CHANGE_EXISTS=$(grep -c '<types>' changed-sources/destructiveChanges/destructiveChanges.xml)" >> $GITHUB_ENV
 
             - name: "Deploy destructive changes (if any)"
