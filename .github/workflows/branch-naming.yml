@@ -107,7 +107,7 @@ jobs:
             - name: Install SFDX scanner
               run: sfdx plugins:install @salesforce/sfdx-scanner
 
-            - name: "Populate auth file with SFDX_URL secret of sit org"
+            - name: Copy SFDX_INTEGRATION_URL secret to auth file
               shell: bash
               run: |
                   echo ${{ secrets.SFDX_INTEGRATION_URL}} > ./SFDX_INTEGRATION_URL.txt
@@ -124,7 +124,7 @@ jobs:
                   cd ..
 
             - name: Upload SARIF file
-              uses: github/codeql-action/upload-sarif@v1
+              uses: github/codeql-action/upload-sarif@v2
               with:
                   sarif_file: changed-sources/apexScanResults.sarif
 
@@ -136,13 +136,12 @@ jobs:
               if: ${{ env.APEX_TESTS != 'all' }}
               run: |
                   echo ${{env.APEX_TESTS}}
-                  sf project deploy start --source "changed-sources/force-app" --checkonly  --test-level RunSpecifiedTests --runtests ${{env.APEX_TESTS}} --json
-                  sfdx force:source:deploy -p "changed-sources/force-app" --checkonly --testlevel RunSpecifiedTests --runtests ${{env.APEX_TESTS}} --json
+                  sf project deploy validate -metadata-dir "changed-sources/force-app" --test-level RunSpecifiedTests --tests ${{env.APEX_TESTS}} --json
 
             - name: "Check-only deploy delta changes - run all tests"
               if: ${{ env.APEX_TESTS == 'all' }}
               run: |
-                  sf project deploy start --source "changed-sources/force-app" --checkonly --testlevel RunLocalTests  --json
+                  sf project deploy validate -metadata-dir "changed-sources/force-app" --testlevel RunLocalTests  --json
 
             - name: "Deploy destructive changes (if any)"
               run: |
